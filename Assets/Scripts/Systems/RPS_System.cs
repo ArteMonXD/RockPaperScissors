@@ -2,47 +2,76 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class RPS_System : Singletoon<RPS_System>
+public class RPS_System : SingletoonBuffHandler<RPS_System>
 {
-    public enum RPS_Type { Rock, Paper, Scissors}
-    [SerializeField] private RPS_Type chosePlayer;
-    public RPS_Type ChosePlayer => chosePlayer;
-    [SerializeField] private RPS_Type choseEnemy;
-    public RPS_Type ChoseEnemy => choseEnemy;
-    public delegate void ResultRPSReceived(sbyte result);
+    public enum RPS_Type {Rock, Paper, Scissors, None}
+    [SerializeField] private RPS_Type choisePlayer;
+    public RPS_Type? ChoisePlayer => choisePlayer;
+    [SerializeField] private RPS_Type choiseEnemy;
+    public RPS_Type? ChoiseEnemy => choiseEnemy;
+    private Enemy_System m_EnemySystem;
+    private BattleSystem m_BattleSystem;
+    public delegate void ResultRPSReceived(int result);
     public event ResultRPSReceived ResultRPSReceivedEvent;
+    public delegate void SecondChangeBuffRequest();
+    public event SecondChangeBuffRequest OnSecondChangeBuffRequestEvent;
+
+    public bool m_UseBuff;
+    public void Init()
+    {
+        m_EnemySystem = Enemy_System.Instance;
+        m_BattleSystem = BattleSystem.Instance;
+        m_EnemySystem.OnEnemySwitchEvent += RandomChoseEnemy;
+        m_BattleSystem.OnTakeDamageEvent += RandomChoseEnemy;
+    }
     public void SetChosePlayer(RPS_Type type)
     {
-        chosePlayer = type;
-        RandomChoseEnemy();
+        Debug.Log($"Chose Player! Selected {type}");
+        choisePlayer = type;
+        if (!m_UseBuff)
+        {
+            CalculateResult();
+        }
+        else
+        {
+            OnSecondChangeBuffRequestEvent?.Invoke();
+        }
     }
 
     private void RandomChoseEnemy()
+    {
+        choiseEnemy = RandomChose();
+        Debug.Log($"Chose Enemy! Selected {choiseEnemy}");
+    }
+    private RPS_Type RandomChose()
     {
         byte randomValue = (byte)Random.Range(0, 3);
         switch (randomValue)
         {
             case 0:
-                choseEnemy = RPS_Type.Rock;
-                break;
+                return RPS_Type.Rock;
             case 1:
-                choseEnemy = RPS_Type.Paper;
-                break;
+                return RPS_Type.Paper;
             case 2:
-                choseEnemy = RPS_Type.Scissors;
-                break;
-        }
-        CalculateResult();
-    }
+                return RPS_Type.Scissors;
 
+            default:
+                return RPS_Type.None;
+        }
+    }
+    private void RandomChosePlayer()
+    {
+        choisePlayer = RandomChose();
+        Debug.Log($"Chose Player! Selected {choiseEnemy}");
+    }
     private void CalculateResult()
     {
-        sbyte result = 0;
-        if(chosePlayer != choseEnemy)
+        int result = 0;
+        if(choisePlayer != choiseEnemy)
         {
-            if((chosePlayer == RPS_Type.Rock && choseEnemy == RPS_Type.Paper) ||
-               (chosePlayer == RPS_Type.Paper && choseEnemy == RPS_Type.Scissors) ||
-               (chosePlayer == RPS_Type.Scissors && choseEnemy == RPS_Type.Rock))
+            if((choisePlayer == RPS_Type.Rock && choiseEnemy == RPS_Type.Paper) ||
+               (choisePlayer == RPS_Type.Paper && choiseEnemy == RPS_Type.Scissors) ||
+               (choisePlayer == RPS_Type.Scissors && choiseEnemy == RPS_Type.Rock))
             {
                 result = -1;
             }
@@ -57,5 +86,32 @@ public class RPS_System : Singletoon<RPS_System>
         }
 
         ResultRPSReceivedEvent?.Invoke(result);
+    }
+    public void SecondChange(bool request)
+    {
+        if (m_UseBuff)
+        {
+            if (request)
+            {
+                RandomChosePlayer();
+                CalculateResult();
+            }
+            else
+            {
+                CalculateResult();
+            }
+            m_UseBuff = false;
+            BuffUseEvent(4);
+        }
+    }
+    private void OnDestroy()
+    {
+        m_EnemySystem.OnEnemySwitchEvent -= RandomChoseEnemy;
+        m_BattleSystem.OnTakeDamageEvent -= RandomChoseEnemy;
+    }
+
+    public void SecondChanceBuff()
+    {
+        m_UseBuff = true;
     }
 }

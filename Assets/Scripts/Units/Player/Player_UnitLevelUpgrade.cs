@@ -2,10 +2,16 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-[RequireComponent(typeof(UnitLevel))]
+[RequireComponent(typeof(PlayerLevel))]
 public class Player_UnitLevelUpgrade : MonoBehaviour
 {
     private UnitLevel unitLevel;
+    public delegate void UnitLevelUpgradeHandler();
+    public event UnitLevelUpgradeHandler OnUnitLevelUpgradeEvent;
+    public delegate void UnitParameterUpgradeHandler(RPS_System.RPS_Type rPS_Type);
+    public event UnitParameterUpgradeHandler OnUnitParameterUpgradeEvent;
+    public delegate void EndUnitLevelUpgradeHandler();
+    public event EndUnitLevelUpgradeHandler OnEndUnitLevelUpgradeEvent;
 
     public void Init()
     {
@@ -15,18 +21,12 @@ public class Player_UnitLevelUpgrade : MonoBehaviour
 
     private void LevelUpgrade()
     {
-        //Show Upgrade Menu
+        OnUnitLevelUpgradeEvent?.Invoke();
     }
-    public void UpgradeRock()
+    public void UpgradeParameter(RPS_System.RPS_Type rPS_Type)
     {
-        unitLevel.LevelUpParameter(RPS_System.RPS_Type.Rock);
-    }
-    public void UpgradePaper()
-    {
-        unitLevel.LevelUpParameter(RPS_System.RPS_Type.Paper);
-    }
-    public void UpgradeScissors()
-    {
-        unitLevel.LevelUpParameter(RPS_System.RPS_Type.Scissors);
+        unitLevel.LevelUpParameter(rPS_Type);
+        OnUnitParameterUpgradeEvent?.Invoke(rPS_Type);
+        OnEndUnitLevelUpgradeEvent?.Invoke();
     }
 }
